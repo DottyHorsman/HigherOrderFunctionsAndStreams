@@ -14,10 +14,8 @@ import java.time.Instant;
 import java.time.Month;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoField;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -164,7 +162,7 @@ public class HigherOrderFunctionsLearningTest {
     public void testCountChangesInFebruary() {
         Stream<Month> input = getRevisions("soup30.json") //changed from Stream<Revision> to Stream<Month>
                 .map(x -> x.timestamp.atOffset(ZoneOffset.UTC).getMonth())
-                .filter(y -> y.equals(Month.FEBRUARY));
+                .filter(x -> x.equals(Month.FEBRUARY));
         long actual = input.count();
         int expected = 9;
         Assertions.assertEquals(expected, actual);
@@ -175,17 +173,20 @@ public class HigherOrderFunctionsLearningTest {
      */
     @Test
     public void testCountChangesByMonth() {
+        Month firstMonth = Month.FEBRUARY;
+        Month secondMonth = Month.MARCH;
+        Map<Month, Long> expected = Map.of(firstMonth, 3L, secondMonth, 1L);
+        //"changed" the Month values in expected Map, so the same local variables
+        //can be used in expected and actual (lets it work for any pair of months)
 
-        //changed from Stream<Revision> to Stream<Object>
-        Stream<Object> input = getRevisions("soup04.json")
-                .map(x -> x.timestamp.atOffset(ZoneOffset.UTC).getMonth());
+        //changed from Stream<Revision> to Stream<Month>
+        Stream<Month> input = getRevisions("soup04.json")
+                .map(x -> x.timestamp.atOffset(ZoneOffset.UTC).getMonth())
+                .filter(x -> x.equals(firstMonth) || x.equals(secondMonth));
 
-        //input.collect(Collectors.groupingBy(getMonth(), Collectors.counting()));
-        Map<Month, Long> actual = null;
-        Map<Month, Long> expected = Map.of(Month.FEBRUARY, 3L, Month.MARCH, 1L);
+        Map<Month, Long> actual = input.collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+
         Assertions.assertEquals(expected, actual);
-
-        //come back to this one
     }
 
     /**
@@ -194,11 +195,16 @@ public class HigherOrderFunctionsLearningTest {
      */
     @Test
     public void testDetermineMostActiveMonth() {
-        Stream<Revision> input = getRevisions("soup30.json");
-        Month actual = null;
+        //changed from Stream<Revision> to Optional Optional<Map.Entry<Month, Long>>
+        Optional<Map.Entry<Month, Long>> input = getRevisions("soup04.json")
+                .map(x -> x.timestamp.atOffset(ZoneOffset.UTC).getMonth())
+                .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
+                .entrySet()
+                .stream().max(Map.Entry.comparingByValue());
+
+        Month actual = input.get().getKey();
         Month expected = Month.FEBRUARY;
         Assertions.assertEquals(expected, actual);
-        //come back to this one too
     }
 
     /**
